@@ -1,0 +1,10 @@
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+sqlmodel==0.0.22
+aiosqlite==0.20.0
+sqlalchemy[asyncio]==2.0.36
+ollama==0.4.7
+Pillow==11.0.0
+duckduckgo-search==6.3.7
+httpx==0.27.2
+python-multipart==0.0.17

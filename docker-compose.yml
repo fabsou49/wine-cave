@@ -1,0 +1,12 @@
+services:
+  cave:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "${PORT:-8080}:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+    restart: unless-stopped
