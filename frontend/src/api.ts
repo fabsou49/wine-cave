@@ -30,6 +30,8 @@ export interface Bottle {
   peak_year_start: number | null;
   peak_year_end: number | null;
   best_pairing: string | null;
+  tasting_year: number | null;
+  description: string | null;
   analysis_done: boolean;
   slot_id: number | null;
   created_at: string;

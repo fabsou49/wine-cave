@@ -190,10 +190,12 @@ export default function Inventory() {
                 {b.analysis_done && (
                   <div className="text-xs text-stone-500 space-y-0.5 pt-1 border-t border-stone-100">
                     {b.wine_type && <p><span className="font-medium">Type :</span> {b.wine_type}</p>}
+                    {b.tasting_year && <p><span className="font-medium">À déguster :</span> {b.tasting_year}</p>}
                     {b.peak_year_start && (
                       <p><span className="font-medium">Apogée :</span> {b.peak_year_start}–{b.peak_year_end}</p>
                     )}
                     {b.best_pairing && <p className="truncate"><span className="font-medium">Accords :</span> {b.best_pairing}</p>}
+                    {b.description && <p className="text-stone-400 italic line-clamp-2">{b.description}</p>}
                   </div>
                 )}
                 <div className="flex gap-1.5 pt-1">

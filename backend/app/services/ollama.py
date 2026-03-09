@@ -100,8 +100,14 @@ def _analyze_sync(bottle_info: dict, web_context: str = "") -> dict:
         if web_context else ""
     )
     prompt = (
-        "Tu es un expert sommelier. Analyse ce vin et retourne UNIQUEMENT un objet JSON:\n"
-        '{"type_vin": string, "apogee_debut": integer|null, "apogee_fin": integer|null, "accord": string}\n'
+        "Tu es un expert sommelier. Analyse ce vin et retourne UNIQUEMENT un objet JSON avec ces champs:\n"
+        '{"type_vin": string, "apogee_debut": integer|null, "apogee_fin": integer|null, '
+        '"accord": string, "annee_degustation": integer|null, "description": string}\n'
+        "- type_vin : rouge / blanc / rosé / effervescent / liquoreux / autre\n"
+        "- apogee_debut / apogee_fin : années de la fenêtre d'apogée\n"
+        "- accord : accords mets-vins détaillés\n"
+        "- annee_degustation : année idéale pour ouvrir la bouteille (entier)\n"
+        "- description : description du vin en 2-3 phrases (arômes, bouche, caractère)\n"
         f"Informations du vin: {json.dumps(bottle_info, ensure_ascii=False)}\n"
         f"{context_block}"
         "Retourne UNIQUEMENT le JSON, sans explication."

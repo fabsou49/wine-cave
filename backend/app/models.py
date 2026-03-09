@@ -33,6 +33,8 @@ class Bottle(SQLModel, table=True):
     peak_year_start: Optional[int] = None
     peak_year_end: Optional[int] = None
     best_pairing: Optional[str] = None
+    tasting_year: Optional[int] = None
+    description: Optional[str] = None
     analysis_done: bool = False
     slot_id: Optional[int] = Field(default=None, foreign_key="slot.id")
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -62,6 +64,8 @@ class BottleUpdate(SQLModel):
     peak_year_start: Optional[int] = None
     peak_year_end: Optional[int] = None
     best_pairing: Optional[str] = None
+    tasting_year: Optional[int] = None
+    description: Optional[str] = None
 
 
 class PlaceBottle(SQLModel):

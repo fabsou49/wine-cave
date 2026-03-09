@@ -36,6 +36,8 @@ async def analyze_bottle(bottle_id: int, session: AsyncSession = Depends(get_ses
         bottle.peak_year_start = result.get("apogee_debut")
         bottle.peak_year_end = result.get("apogee_fin")
         bottle.best_pairing = result.get("accord")
+        bottle.tasting_year = result.get("annee_degustation")
+        bottle.description = result.get("description")
         bottle.analysis_done = True
 
     session.add(bottle)
