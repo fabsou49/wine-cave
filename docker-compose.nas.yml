@@ -4,7 +4,7 @@
 
 services:
   cave:
-    image: ghcr.io/<GITHUB_USER>/wine-cave:latest
+    image: ghcr.io/fabsou49/wine-cave:latest
     ports:
       - "${PORT:-8080}:8080"
     volumes:
