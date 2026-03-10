@@ -7,8 +7,10 @@ Application web de gestion de cave à vin — pensée pour un usage quotidien de
 ## Fonctionnalités
 
 ### Gestion de la cave
-- Crée des **sections** (ex : armoire basse, rack mural) avec un nombre de rangées et colonnes personnalisable
-- Visualise ta cave sous forme de **grille interactive**
+- Crée des **sections** (ex : armoire basse, rack mural) avec colonnes et rangées personnalisables
+- **Hauteur variable par colonne** : chaque colonne peut avoir un nombre de rangées différent (ex : A=5, B=8, C=3…)
+- **Numérotation automatique** : colonnes étiquetées A, B, C… et rangées 1, 2, 3… dans la vue cave
+- Visualise ta cave sous forme de **grille interactive** avec repères visuels
 - Glisse-dépose les bouteilles dans les emplacements (drag & drop sur desktop)
 - Photo de fond personnalisable par section
 
@@ -164,6 +166,13 @@ Stockées dans `./data/` (volume Docker) :
 ---
 
 ## Changelog
+
+### v4 — Grille asymétrique + numérotation des emplacements
+- **Nouveau** : nombre de rangées configurable individuellement par colonne (casiers de hauteurs différentes)
+- **Nouveau** : numérotation A/B/C… sur les colonnes et 1/2/3… sur les rangées dans la vue cave
+- **Nouveau** : tooltip de chaque emplacement affiche sa référence (ex : "B4")
+- **Amélioré** : modal de création de section avec inputs individuels par colonne et compteur total d'emplacements
+- **Technique** : `column_rows` stocké en JSON sur `Section`, migration safe au démarrage
 
 ### v3 — Cycle de vie des bouteilles + ergonomie iPhone
 - **Nouveau** : champ *Détail de l'obtention* par bouteille
