@@ -26,7 +26,19 @@ UPLOADS_DIR = Path(f"{DATA_DIR}/uploads/bottles")
 
 @router.get("", response_model=List[Bottle])
 async def list_bottles(session: AsyncSession = Depends(get_session)):
-    result = await session.exec(select(Bottle))
+    """Returns active bottles (excludes consommé/offerte — use /history for those)."""
+    result = await session.exec(
+        select(Bottle).where(Bottle.statut != "consommé/offerte")
+    )
+    return result.all()
+
+
+@router.get("/history", response_model=List[Bottle])
+async def list_bottles_history(session: AsyncSession = Depends(get_session)):
+    """Returns consumed or gifted bottles."""
+    result = await session.exec(
+        select(Bottle).where(Bottle.statut == "consommé/offerte")
+    )
     return result.all()
 
 
@@ -67,6 +79,11 @@ async def update_bottle(
         raise HTTPException(status_code=404, detail="Bottle not found")
 
     update_data = data.model_dump(exclude_unset=True)
+
+    # If marked as consommé/offerte, remove from slot automatically
+    if update_data.get("statut") == "consommé/offerte" and bottle.slot_id is not None:
+        bottle.slot_id = None
+
     for key, value in update_data.items():
         setattr(bottle, key, value)
 
@@ -113,6 +130,7 @@ async def place_bottle(
         raise HTTPException(status_code=409, detail="Slot already occupied")
 
     bottle.slot_id = data.slot_id
+    bottle.statut = "en cave"
     session.add(bottle)
     await session.commit()
     await session.refresh(bottle)
@@ -129,6 +147,8 @@ async def remove_bottle_from_slot(
         raise HTTPException(status_code=404, detail="Bottle not found")
 
     bottle.slot_id = None
+    if bottle.statut == "en cave":
+        bottle.statut = "à ranger"
     session.add(bottle)
     await session.commit()
     await session.refresh(bottle)

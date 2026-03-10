@@ -6,6 +6,11 @@ import { getBottles, uploadBottle, deleteBottle } from "../api";
 import type { Bottle } from "../api";
 import LabelForm from "../components/LabelForm";
 
+const STATUT_BADGE: Record<string, string> = {
+  "à ranger": "bg-amber-100 text-amber-700",
+  "en cave": "bg-emerald-100 text-emerald-700",
+};
+
 export default function Inventory() {
   const qc = useQueryClient();
   const { data: bottles = [], isLoading } = useQuery({
@@ -23,12 +28,11 @@ export default function Inventory() {
       setUploadProgress({ done: 0, total: files.length });
       await new Promise((r) => setTimeout(r, 50));
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
         try {
-          await uploadBottle(file);
-          toast.success(`${file.name} importé`);
+          await uploadBottle(files[i]);
+          toast.success(`${files[i].name} importé`);
         } catch {
-          toast.error(`Erreur pour ${file.name}`);
+          toast.error(`Erreur pour ${files[i].name}`);
         }
         setUploadProgress({ done: i + 1, total: files.length });
       }
@@ -40,14 +44,13 @@ export default function Inventory() {
   );
 
   const onDrop = useCallback((files: File[]) => processFiles(files), [processFiles]);
-
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { "image/*": [] },
     multiple: true,
   });
 
-  const handleCameraChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length) processFiles(files);
     e.target.value = "";
@@ -70,45 +73,33 @@ export default function Inventory() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-wine-700">Inventaire</h1>
+      <h1 className="text-xl font-bold text-wine-700">Inventaire</h1>
 
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        multiple
-        className="hidden"
-        onChange={handleCameraChange}
-      />
-      <input
-        ref={galleryInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={handleCameraChange}
-      />
+      {/* Hidden file inputs */}
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={handleFileChange} />
+      <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
 
+      {/* Mobile upload buttons */}
       <div className="sm:hidden grid grid-cols-2 gap-3">
         <button
           onClick={() => cameraInputRef.current?.click()}
           disabled={!!uploadProgress}
-          className="flex flex-col items-center justify-center gap-2 bg-wine-600 text-white rounded-xl py-5 font-semibold shadow-md active:bg-wine-700 disabled:opacity-50"
+          className="flex flex-col items-center justify-center gap-2 bg-wine-600 text-white rounded-2xl py-5 font-semibold shadow active:bg-wine-700 disabled:opacity-50"
         >
           <span className="text-3xl">📷</span>
-          <span className="text-sm">Appareil photo</span>
+          <span className="text-sm">Photo</span>
         </button>
         <button
           onClick={() => galleryInputRef.current?.click()}
           disabled={!!uploadProgress}
-          className="flex flex-col items-center justify-center gap-2 bg-stone-700 text-white rounded-xl py-5 font-semibold shadow-md active:bg-stone-800 disabled:opacity-50"
+          className="flex flex-col items-center justify-center gap-2 bg-stone-700 text-white rounded-2xl py-5 font-semibold shadow active:bg-stone-800 disabled:opacity-50"
         >
           <span className="text-3xl">🖼️</span>
-          <span className="text-sm">Photothèque</span>
+          <span className="text-sm">Galerie</span>
         </button>
       </div>
 
+      {/* Desktop drag zone */}
       <div
         {...getRootProps()}
         className={`hidden sm:flex border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors items-center justify-center min-h-[100px] ${
@@ -126,71 +117,78 @@ export default function Inventory() {
         )}
       </div>
 
+      {/* Upload progress */}
       {uploadProgress && (
         <div className="bg-white rounded-xl border border-stone-200 p-4 space-y-2">
           <div className="flex justify-between text-sm text-stone-600">
             <span>Import en cours…</span>
-            <span className="font-medium">{uploadProgress.done}/{uploadProgress.total} photo{uploadProgress.total > 1 ? "s" : ""}</span>
+            <span className="font-medium">{uploadProgress.done}/{uploadProgress.total}</span>
           </div>
-          <div className="w-full bg-stone-200 rounded-full h-3">
-            <div
-              className="bg-wine-600 h-3 rounded-full transition-all duration-500"
-              style={{ width: `${percent}%` }}
-            />
+          <div className="w-full bg-stone-200 rounded-full h-2.5">
+            <div className="bg-wine-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${percent}%` }} />
           </div>
-          <p className="text-xs text-stone-400 text-right">{percent}%</p>
         </div>
       )}
 
+      {/* Bottle count */}
+      {!isLoading && bottles.length > 0 && (
+        <p className="text-xs text-stone-400 font-medium">{bottles.length} bouteille{bottles.length > 1 ? "s" : ""}</p>
+      )}
+
+      {/* Bottle grid */}
       {isLoading ? (
         <p className="text-stone-500 text-center py-10">Chargement…</p>
       ) : bottles.length === 0 ? (
-        <p className="text-stone-500 text-center py-10">
+        <p className="text-stone-400 text-center py-12 text-sm">
           Aucune bouteille.{" "}
           <span className="sm:hidden">Photographiez une étiquette ci-dessus.</span>
           <span className="hidden sm:inline">Importez des photos ci-dessus.</span>
         </p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {bottles.map((b) => (
-            <div
-              key={b.id}
-              className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm"
-            >
-              {b.photo_path && (
+            <div key={b.id} className="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+              {b.photo_path ? (
                 <img
                   src={b.photo_path}
                   alt={b.domaine ?? "bouteille"}
-                  className="w-full h-36 object-contain bg-stone-50"
+                  className="w-full h-32 object-contain bg-stone-50"
                 />
+              ) : (
+                <div className="w-full h-32 bg-stone-50 flex items-center justify-center text-4xl">🍷</div>
               )}
-              <div className="p-3 space-y-1">
-                <p className="font-semibold text-stone-800 text-sm truncate">
-                  {b.domaine || <span className="text-stone-400 italic">Inconnu</span>}
+              <div className="p-3 flex flex-col flex-1 gap-1">
+                <p className="font-semibold text-stone-800 text-sm leading-tight line-clamp-1">
+                  {b.domaine || <span className="text-stone-400 italic text-xs">Sans nom</span>}
                 </p>
-                <p className="text-xs text-stone-500 truncate">
-                  {[b.appellation, b.cepage, b.millesime].filter(Boolean).join(" · ")}
-                </p>
-                <div className="flex gap-1 flex-wrap">
+                {(b.appellation || b.millesime) && (
+                  <p className="text-xs text-stone-500 line-clamp-1">
+                    {[b.appellation, b.millesime].filter(Boolean).join(" · ")}
+                  </p>
+                )}
+                <div className="flex gap-1 flex-wrap mt-0.5">
                   {!b.label_verified && (
-                    <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">À vérifier</span>
+                    <span className="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded-full">À vérifier</span>
                   )}
-                  {b.slot_id && (
-                    <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">En cave</span>
+                  {b.statut === "en cave" && (
+                    <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-full">En cave</span>
+                  )}
+                  {b.statut === "à ranger" && b.label_verified && (
+                    <span className="text-[10px] bg-stone-100 text-stone-500 border border-stone-200 px-1.5 py-0.5 rounded-full">À ranger</span>
                   )}
                 </div>
-                <div className="flex gap-1.5 pt-1">
+                <div className="flex gap-1.5 mt-auto pt-2">
                   <button
                     onClick={() => setEditing(b)}
-                    className="flex-1 text-xs bg-wine-600 text-white rounded-lg px-2 py-2 active:bg-wine-700"
+                    className="flex-1 text-xs bg-wine-600 text-white rounded-xl py-2 font-medium active:bg-wine-700"
                   >
                     Éditer
                   </button>
                   <button
                     onClick={() => handleDelete(b)}
-                    className="text-xs text-red-600 border border-red-200 rounded-lg px-2 py-2 active:bg-red-50"
+                    className="text-xs text-red-500 border border-red-200 rounded-xl px-3 py-2 active:bg-red-50"
                   >
-                    Supprimer
+                    ✕
                   </button>
                 </div>
               </div>

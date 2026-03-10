@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from app.database import init_db
+from app.database import init_db, migrate_db
 from app.routers import sections, bottles, auth
 
 DATA_DIR = os.environ.get("DATA_DIR", "/data")
@@ -15,6 +15,7 @@ DATA_DIR = os.environ.get("DATA_DIR", "/data")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    await migrate_db()
     Path(f"{DATA_DIR}/uploads/bottles").mkdir(parents=True, exist_ok=True)
     Path(f"{DATA_DIR}/uploads/sections").mkdir(parents=True, exist_ok=True)
     yield

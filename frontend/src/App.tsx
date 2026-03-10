@@ -4,6 +4,7 @@ import { Toaster } from "react-hot-toast";
 import Layout from "./components/Layout";
 import Cave from "./pages/Cave";
 import Inventory from "./pages/Inventory";
+import History from "./pages/History";
 import Login from "./pages/Login";
 import { getToken } from "./api";
 
@@ -30,10 +31,11 @@ export default function App() {
           >
             <Route index element={<Cave />} />
             <Route path="inventory" element={<Inventory />} />
+            <Route path="history" element={<History />} />
           </Route>
         </Routes>
       </BrowserRouter>
-      <Toaster position="bottom-right" />
+      <Toaster position="top-center" containerStyle={{ top: 70 }} />
     </QueryClientProvider>
   );
 }

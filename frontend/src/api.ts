@@ -51,6 +51,9 @@ export interface Bottle {
   label_verified: boolean;
   slot_id: number | null;
   created_at: string;
+  obtention_detail: string | null;
+  statut: "à ranger" | "en cave" | "consommé/offerte";
+  commentaire_consommation: string | null;
 }
 
 // Auth
@@ -90,6 +93,7 @@ export const getSectionSlots = (id: number) =>
 
 // Bottles
 export const getBottles = () => request<Bottle[]>(`${BASE}/bottles`);
+export const getBottlesHistory = () => request<Bottle[]>(`${BASE}/bottles/history`);
 export const uploadBottle = (file: File) => {
   const fd = new FormData();
   fd.append("file", file);

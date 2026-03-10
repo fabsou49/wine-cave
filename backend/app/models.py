@@ -31,6 +31,10 @@ class Bottle(SQLModel, table=True):
     label_verified: bool = False
     slot_id: Optional[int] = Field(default=None, foreign_key="slot.id")
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    # New lifecycle fields
+    obtention_detail: Optional[str] = None
+    statut: str = Field(default="à ranger")  # "à ranger", "en cave", "consommé/offerte"
+    commentaire_consommation: Optional[str] = None
 
 
 # Pydantic schemas (non-table)
@@ -53,6 +57,9 @@ class BottleUpdate(SQLModel):
     millesime: Optional[int] = None
     taille: Optional[str] = None
     label_verified: Optional[bool] = None
+    obtention_detail: Optional[str] = None
+    statut: Optional[str] = None
+    commentaire_consommation: Optional[str] = None
 
 
 class PlaceBottle(SQLModel):
