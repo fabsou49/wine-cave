@@ -1,0 +1,16 @@
+# docker-compose pour Synology NAS
+# Utilise l'image pré-construite depuis GitHub Container Registry
+# Remplacer <GITHUB_USER> par votre nom d'utilisateur GitHub
+
+services:
+  cave:
+    image: ghcr.io/<GITHUB_USER>/wine-cave:latest
+    ports:
+      - "${PORT:-8080}:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    restart: unless-stopped
