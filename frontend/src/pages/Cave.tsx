@@ -29,7 +29,8 @@ export default function Cave() {
   const qc = useQueryClient();
   const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [newSection, setNewSection] = useState({ name: "", rows: 5, cols: 10 });
+  const [newSection, setNewSection] = useState({ name: "", defaultRows: 5, cols: 5 });
+  const [columnRows, setColumnRows] = useState<number[]>([5, 5, 5, 5, 5]);
   const [editingBottle, setEditingBottle] = useState<Bottle | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("cave");
 
@@ -74,15 +75,39 @@ export default function Cave() {
   const handleCreateSection = async () => {
     if (!newSection.name) return;
     try {
-      const s = await createSection(newSection);
+      const s = await createSection({
+        name: newSection.name,
+        rows: newSection.defaultRows,
+        cols: newSection.cols,
+        column_rows: columnRows,
+      });
       qc.invalidateQueries({ queryKey: ["sections"] });
       setSelectedSectionId(s.id);
       setShowCreate(false);
-      setNewSection({ name: "", rows: 5, cols: 10 });
+      setNewSection({ name: "", defaultRows: 5, cols: 5 });
+      setColumnRows([5, 5, 5, 5, 5]);
       toast.success("Section créée");
     } catch {
       toast.error("Erreur création section");
     }
+  };
+
+  // When cols count changes, rebuild columnRows
+  const handleColsChange = (cols: number) => {
+    const clamped = Math.max(1, Math.min(30, cols));
+    setNewSection((n) => ({ ...n, cols: clamped }));
+    setColumnRows((prev) => {
+      const next = Array(clamped).fill(newSection.defaultRows);
+      for (let i = 0; i < Math.min(prev.length, clamped); i++) next[i] = prev[i];
+      return next;
+    });
+  };
+
+  // When default rows changes, fill all columns
+  const handleDefaultRowsChange = (rows: number) => {
+    const clamped = Math.max(1, Math.min(30, rows));
+    setNewSection((n) => ({ ...n, defaultRows: clamped }));
+    setColumnRows(Array(newSection.cols).fill(clamped));
   };
 
   const handleDeleteSection = async (s: Section) => {
@@ -245,9 +270,16 @@ export default function Cave() {
       {/* ── Create section modal ── */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl p-5 w-full sm:w-80 shadow-xl">
-            <h2 className="text-base font-bold mb-4 text-wine-700">Nouvelle section</h2>
-            <div className="space-y-3">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg max-h-[90dvh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-stone-100 shrink-0">
+              <h2 className="text-base font-bold text-wine-700">Nouvelle section</h2>
+              <button onClick={() => setShowCreate(false)} className="text-stone-400 text-2xl leading-none w-8 h-8 flex items-center justify-center">×</button>
+            </div>
+
+            {/* Body */}
+            <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+              {/* Nom */}
               <div>
                 <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Nom</label>
                 <input
@@ -259,32 +291,67 @@ export default function Cave() {
                   autoFocus
                 />
               </div>
+
+              {/* Global settings */}
               <div className="flex gap-3">
-                <div className="flex-1">
-                  <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Rangées</label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={newSection.rows}
-                    onChange={(e) => setNewSection((n) => ({ ...n, rows: parseInt(e.target.value) }))}
-                    className={inputCls}
-                  />
-                </div>
                 <div className="flex-1">
                   <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Colonnes</label>
                   <input
                     type="number"
                     min={1}
-                    max={20}
+                    max={30}
                     value={newSection.cols}
-                    onChange={(e) => setNewSection((n) => ({ ...n, cols: parseInt(e.target.value) }))}
+                    onChange={(e) => handleColsChange(parseInt(e.target.value) || 1)}
+                    className={inputCls}
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Rangées (défaut)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={30}
+                    value={newSection.defaultRows}
+                    onChange={(e) => handleDefaultRowsChange(parseInt(e.target.value) || 1)}
                     className={inputCls}
                   />
                 </div>
               </div>
+
+              {/* Per-column row counts */}
+              <div>
+                <label className="block text-xs font-semibold text-stone-500 mb-2 uppercase tracking-wide">
+                  Rangées par colonne
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {columnRows.map((r, i) => {
+                    const letter = String.fromCharCode(65 + (i % 26));
+                    return (
+                      <div key={i} className="flex flex-col items-center gap-1">
+                        <span className="text-[11px] font-bold text-stone-500">{letter}</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={30}
+                          value={r}
+                          onChange={(e) => {
+                            const val = Math.max(1, Math.min(30, parseInt(e.target.value) || 1));
+                            setColumnRows((prev) => prev.map((v, idx) => idx === i ? val : v));
+                          }}
+                          className="w-12 border border-stone-300 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-wine-500"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-stone-400 mt-2">
+                  Total : {columnRows.reduce((a, b) => a + b, 0)} emplacements
+                </p>
+              </div>
             </div>
-            <div className="flex gap-3 mt-5">
+
+            {/* Footer */}
+            <div className="flex gap-3 px-5 py-4 border-t border-stone-100 shrink-0">
               <button onClick={handleCreateSection} className="flex-1 bg-wine-600 text-white rounded-xl px-4 py-3 text-sm font-semibold active:bg-wine-700">
                 Créer
               </button>

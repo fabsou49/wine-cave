@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from sqlmodel import Field, SQLModel
 
 
@@ -10,6 +10,7 @@ class Section(SQLModel, table=True):
     cols: int
     photo_path: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    column_rows: Optional[str] = None  # JSON array e.g. "[5,6,4,5]" — rows per column
 
 
 class Slot(SQLModel, table=True):
@@ -42,12 +43,11 @@ class SectionCreate(SQLModel):
     name: str
     rows: int
     cols: int
+    column_rows: Optional[List[int]] = None  # per-column row counts; overrides rows/cols if set
 
 
 class SectionUpdate(SQLModel):
     name: Optional[str] = None
-    rows: Optional[int] = None
-    cols: Optional[int] = None
 
 
 class BottleUpdate(SQLModel):

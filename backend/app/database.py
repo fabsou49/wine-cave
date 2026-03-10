@@ -24,17 +24,21 @@ async def migrate_db():
         result = await conn.execute(text("PRAGMA table_info(bottle)"))
         existing_cols = {row[1] for row in result.fetchall()}
 
-        new_columns = [
+        for col_name, col_def in [
             ("obtention_detail", "TEXT"),
             ("statut", "TEXT NOT NULL DEFAULT 'à ranger'"),
             ("commentaire_consommation", "TEXT"),
-        ]
-
-        for col_name, col_def in new_columns:
+        ]:
             if col_name not in existing_cols:
                 await conn.execute(
                     text(f"ALTER TABLE bottle ADD COLUMN {col_name} {col_def}")
                 )
+
+        # Migrate section table
+        result = await conn.execute(text("PRAGMA table_info(section)"))
+        existing_section_cols = {row[1] for row in result.fetchall()}
+        if "column_rows" not in existing_section_cols:
+            await conn.execute(text("ALTER TABLE section ADD COLUMN column_rows TEXT"))
 
 
 async def get_session():

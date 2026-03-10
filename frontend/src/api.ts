@@ -30,6 +30,7 @@ export interface Section {
   cols: number;
   photo_path: string | null;
   created_at: string;
+  column_rows: string | null;  // JSON array e.g. "[5,6,4,5]"
 }
 
 export interface Slot {
@@ -69,7 +70,7 @@ export const login = (username: string, password: string) =>
 
 // Sections
 export const getSections = () => request<Section[]>(`${BASE}/sections`);
-export const createSection = (data: { name: string; rows: number; cols: number }) =>
+export const createSection = (data: { name: string; rows: number; cols: number; column_rows?: number[] }) =>
   request<Section>(`${BASE}/sections`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

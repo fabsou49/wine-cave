@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 from pathlib import Path
@@ -29,15 +30,30 @@ async def list_sections(session: AsyncSession = Depends(get_session)):
 
 @router.post("", response_model=Section)
 async def create_section(data: SectionCreate, session: AsyncSession = Depends(get_session)):
-    section = Section(**data.model_dump())
+    # Resolve per-column row counts
+    if data.column_rows:
+        col_rows = data.column_rows
+        cols = len(col_rows)
+        rows = max(col_rows)
+    else:
+        cols = data.cols
+        rows = data.rows
+        col_rows = [rows] * cols
+
+    section = Section(
+        name=data.name,
+        rows=rows,
+        cols=cols,
+        column_rows=json.dumps(col_rows),
+    )
     session.add(section)
     await session.commit()
     await session.refresh(section)
 
-    # Auto-create all slots
-    for r in range(section.rows):
-        for c in range(section.cols):
-            slot = Slot(section_id=section.id, row=r, col=c)
+    # Auto-create slots — variable height per column
+    for col_idx, num_rows in enumerate(col_rows):
+        for row_idx in range(num_rows):
+            slot = Slot(section_id=section.id, row=row_idx, col=col_idx)
             session.add(slot)
     await session.commit()
     return section
@@ -69,7 +85,6 @@ async def delete_section(section_id: int, session: AsyncSession = Depends(get_se
     if not section:
         raise HTTPException(status_code=404, detail="Section not found")
 
-    # Delete associated slots
     slots = await session.exec(select(Slot).where(Slot.section_id == section_id))
     for slot in slots.all():
         await session.delete(slot)
