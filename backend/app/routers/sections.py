@@ -30,29 +30,29 @@ async def list_sections(session: AsyncSession = Depends(get_session)):
 
 @router.post("", response_model=Section)
 async def create_section(data: SectionCreate, session: AsyncSession = Depends(get_session)):
-    # Resolve per-column row counts
-    if data.column_rows:
-        col_rows = data.column_rows
-        cols = len(col_rows)
-        rows = max(col_rows)
+    # Resolve per-row slot counts
+    if data.row_cols:
+        row_cols = data.row_cols
+        rows = len(row_cols)
+        cols = max(row_cols)
     else:
-        cols = data.cols
         rows = data.rows
-        col_rows = [rows] * cols
+        cols = data.cols
+        row_cols = [cols] * rows
 
     section = Section(
         name=data.name,
         rows=rows,
         cols=cols,
-        column_rows=json.dumps(col_rows),
+        row_cols=json.dumps(row_cols),
     )
     session.add(section)
     await session.commit()
     await session.refresh(section)
 
-    # Auto-create slots — variable height per column
-    for col_idx, num_rows in enumerate(col_rows):
-        for row_idx in range(num_rows):
+    # Auto-create slots — variable width per row
+    for row_idx, num_cols in enumerate(row_cols):
+        for col_idx in range(num_cols):
             slot = Slot(section_id=section.id, row=row_idx, col=col_idx)
             session.add(slot)
     await session.commit()

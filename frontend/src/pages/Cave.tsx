@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
   type DragEndEvent,
+  MeasuringStrategy,
   PointerSensor,
   useSensor,
   useSensors,
@@ -29,8 +30,8 @@ export default function Cave() {
   const qc = useQueryClient();
   const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [newSection, setNewSection] = useState({ name: "", defaultRows: 5, cols: 5 });
-  const [columnRows, setColumnRows] = useState<number[]>([5, 5, 5, 5, 5]);
+  const [newSection, setNewSection] = useState({ name: "", defaultCols: 6, rows: 5 });
+  const [rowCols, setRowCols] = useState<number[]>([6, 6, 6, 6, 6]);
   const [editingBottle, setEditingBottle] = useState<Bottle | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("cave");
 
@@ -77,37 +78,37 @@ export default function Cave() {
     try {
       const s = await createSection({
         name: newSection.name,
-        rows: newSection.defaultRows,
-        cols: newSection.cols,
-        column_rows: columnRows,
+        rows: newSection.rows,
+        cols: newSection.defaultCols,
+        row_cols: rowCols,
       });
       qc.invalidateQueries({ queryKey: ["sections"] });
       setSelectedSectionId(s.id);
       setShowCreate(false);
-      setNewSection({ name: "", defaultRows: 5, cols: 5 });
-      setColumnRows([5, 5, 5, 5, 5]);
+      setNewSection({ name: "", defaultCols: 6, rows: 5 });
+      setRowCols([6, 6, 6, 6, 6]);
       toast.success("Section créée");
     } catch {
       toast.error("Erreur création section");
     }
   };
 
-  // When cols count changes, rebuild columnRows
-  const handleColsChange = (cols: number) => {
-    const clamped = Math.max(1, Math.min(30, cols));
-    setNewSection((n) => ({ ...n, cols: clamped }));
-    setColumnRows((prev) => {
-      const next = Array(clamped).fill(newSection.defaultRows);
+  // When row count changes, rebuild rowCols (keep existing values, pad with default)
+  const handleRowsChange = (rows: number) => {
+    const clamped = Math.max(1, Math.min(30, rows));
+    setNewSection((n) => ({ ...n, rows: clamped }));
+    setRowCols((prev) => {
+      const next = Array(clamped).fill(newSection.defaultCols);
       for (let i = 0; i < Math.min(prev.length, clamped); i++) next[i] = prev[i];
       return next;
     });
   };
 
-  // When default rows changes, fill all columns
-  const handleDefaultRowsChange = (rows: number) => {
-    const clamped = Math.max(1, Math.min(30, rows));
-    setNewSection((n) => ({ ...n, defaultRows: clamped }));
-    setColumnRows(Array(newSection.cols).fill(clamped));
+  // When default cols changes, reset all rows to that value
+  const handleDefaultColsChange = (cols: number) => {
+    const clamped = Math.max(1, Math.min(30, cols));
+    setNewSection((n) => ({ ...n, defaultCols: clamped }));
+    setRowCols(Array(newSection.rows).fill(clamped));
   };
 
   const handleDeleteSection = async (s: Section) => {
@@ -135,7 +136,11 @@ export default function Cave() {
   const inputCls = "w-full border border-stone-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-wine-500";
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+      onDragEnd={handleDragEnd}
+    >
       {/* ── Mobile tab switcher ── */}
       <div className="sm:hidden flex rounded-xl bg-stone-200 p-1 mb-3">
         <button
@@ -295,57 +300,61 @@ export default function Cave() {
               {/* Global settings */}
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Colonnes</label>
+                  <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Rangées</label>
                   <input
                     type="number"
                     min={1}
                     max={30}
-                    value={newSection.cols}
-                    onChange={(e) => handleColsChange(parseInt(e.target.value) || 1)}
+                    value={newSection.rows}
+                    onChange={(e) => handleRowsChange(parseInt(e.target.value) || 1)}
                     className={inputCls}
                   />
                 </div>
                 <div className="flex-1">
-                  <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Rangées (défaut)</label>
+                  <label className="block text-xs font-semibold text-stone-500 mb-1 uppercase tracking-wide">Empl. (défaut)</label>
                   <input
                     type="number"
                     min={1}
                     max={30}
-                    value={newSection.defaultRows}
-                    onChange={(e) => handleDefaultRowsChange(parseInt(e.target.value) || 1)}
+                    value={newSection.defaultCols}
+                    onChange={(e) => handleDefaultColsChange(parseInt(e.target.value) || 1)}
                     className={inputCls}
                   />
                 </div>
               </div>
 
-              {/* Per-column row counts */}
+              {/* Per-row slot counts */}
               <div>
                 <label className="block text-xs font-semibold text-stone-500 mb-2 uppercase tracking-wide">
-                  Rangées par colonne
+                  Emplacements par rangée
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {columnRows.map((r, i) => {
-                    const letter = String.fromCharCode(65 + (i % 26));
-                    return (
-                      <div key={i} className="flex flex-col items-center gap-1">
-                        <span className="text-[11px] font-bold text-stone-500">{letter}</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={30}
-                          value={r}
-                          onChange={(e) => {
-                            const val = Math.max(1, Math.min(30, parseInt(e.target.value) || 1));
-                            setColumnRows((prev) => prev.map((v, idx) => idx === i ? val : v));
-                          }}
-                          className="w-12 border border-stone-300 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-wine-500"
-                        />
+                <div className="flex flex-col gap-2">
+                  {rowCols.map((c, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <span className="text-[11px] font-bold text-stone-500 w-14 shrink-0">
+                        Rangée {i + 1}
+                      </span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={30}
+                        value={c}
+                        onChange={(e) => {
+                          const val = Math.max(1, Math.min(30, parseInt(e.target.value) || 1));
+                          setRowCols((prev) => prev.map((v, idx) => idx === i ? val : v));
+                        }}
+                        className="w-20 border border-stone-300 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-wine-500"
+                      />
+                      <div className="flex gap-0.5">
+                        {Array.from({ length: c }, (_, ci) => (
+                          <div key={ci} className="w-2 h-3 bg-wine-300 rounded-sm" />
+                        ))}
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
-                <p className="text-xs text-stone-400 mt-2">
-                  Total : {columnRows.reduce((a, b) => a + b, 0)} emplacements
+                <p className="text-xs text-stone-400 mt-3">
+                  Total : {rowCols.reduce((a, b) => a + b, 0)} emplacements
                 </p>
               </div>
             </div>

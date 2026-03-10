@@ -10,7 +10,8 @@ class Section(SQLModel, table=True):
     cols: int
     photo_path: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    column_rows: Optional[str] = None  # JSON array e.g. "[5,6,4,5]" — rows per column
+    column_rows: Optional[str] = None  # legacy — kept for backward compat
+    row_cols: Optional[str] = None     # JSON array e.g. "[6,5,4,6]" — slots per row
 
 
 class Slot(SQLModel, table=True):
@@ -43,7 +44,7 @@ class SectionCreate(SQLModel):
     name: str
     rows: int
     cols: int
-    column_rows: Optional[List[int]] = None  # per-column row counts; overrides rows/cols if set
+    row_cols: Optional[List[int]] = None  # slots per row; overrides rows/cols if set
 
 
 class SectionUpdate(SQLModel):

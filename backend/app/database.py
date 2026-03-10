@@ -39,6 +39,8 @@ async def migrate_db():
         existing_section_cols = {row[1] for row in result.fetchall()}
         if "column_rows" not in existing_section_cols:
             await conn.execute(text("ALTER TABLE section ADD COLUMN column_rows TEXT"))
+        if "row_cols" not in existing_section_cols:
+            await conn.execute(text("ALTER TABLE section ADD COLUMN row_cols TEXT"))
 
 
 async def get_session():
