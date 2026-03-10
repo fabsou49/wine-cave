@@ -7,7 +7,7 @@ from typing import Optional
 
 import google.generativeai as genai
 
-MODEL_NAME = "gemini-2.0-flash"
+MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
 PROMPT = """Analyse cette étiquette de vin et retourne UNIQUEMENT un objet JSON avec exactement ces champs :
 {
