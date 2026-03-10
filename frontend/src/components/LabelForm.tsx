@@ -1,7 +1,7 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import type { Bottle } from "../api";
-import { updateBottle, analyzeBottle } from "../api";
+import { updateBottle } from "../api";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface Props {
@@ -18,7 +18,6 @@ export default function LabelForm({ bottle, onClose }: Props) {
     millesime: bottle.millesime?.toString() ?? "",
     taille: bottle.taille ?? "",
   });
-  const [analyzing, setAnalyzing] = useState(false);
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -38,20 +37,6 @@ export default function LabelForm({ bottle, onClose }: Props) {
       onClose();
     } catch {
       toast.error("Erreur lors de la sauvegarde");
-    }
-  };
-
-  const handleAnalyze = async () => {
-    setAnalyzing(true);
-    try {
-      await analyzeBottle(bottle.id);
-      qc.invalidateQueries({ queryKey: ["bottles"] });
-      toast.success("Analyse terminée");
-      onClose();
-    } catch {
-      toast.error("Erreur lors de l'analyse");
-    } finally {
-      setAnalyzing(false);
     }
   };
 
@@ -96,27 +81,12 @@ export default function LabelForm({ bottle, onClose }: Props) {
           </div>
         </div>
 
-        {bottle.analysis_done && (
-          <div className="mt-4 p-3 bg-stone-50 rounded text-xs text-stone-600 space-y-1">
-            <p><span className="font-medium">Type :</span> {bottle.wine_type}</p>
-            <p><span className="font-medium">Apogée :</span> {bottle.peak_year_start}–{bottle.peak_year_end}</p>
-            <p><span className="font-medium">Accords :</span> {bottle.best_pairing}</p>
-          </div>
-        )}
-
         <div className="flex gap-2 mt-5">
           <button
             onClick={handleSave}
             className="flex-1 bg-wine-600 text-white rounded px-4 py-2 text-sm font-medium hover:bg-wine-700"
           >
             Sauvegarder
-          </button>
-          <button
-            onClick={handleAnalyze}
-            disabled={analyzing}
-            className="flex-1 bg-stone-700 text-white rounded px-4 py-2 text-sm font-medium hover:bg-stone-800 disabled:opacity-50"
-          >
-            {analyzing ? "Analyse..." : "Analyser"}
           </button>
           <button
             onClick={onClose}

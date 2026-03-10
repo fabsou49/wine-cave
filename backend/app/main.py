@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from app.database import init_db
-from app.routers import sections, bottles, analysis, settings
+from app.routers import sections, bottles, auth
 
 DATA_DIR = os.environ.get("DATA_DIR", "/data")
 
@@ -15,7 +15,6 @@ DATA_DIR = os.environ.get("DATA_DIR", "/data")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
-    # Ensure upload dirs exist
     Path(f"{DATA_DIR}/uploads/bottles").mkdir(parents=True, exist_ok=True)
     Path(f"{DATA_DIR}/uploads/sections").mkdir(parents=True, exist_ok=True)
     yield
@@ -24,10 +23,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Cave à Vin API", lifespan=lifespan)
 
 # API routes — MUST be registered before catch-all
+app.include_router(auth.router)
 app.include_router(sections.router)
 app.include_router(bottles.router)
-app.include_router(analysis.router)
-app.include_router(settings.router)
 
 # Static uploads
 uploads_path = Path(f"{DATA_DIR}/uploads")

@@ -7,10 +7,15 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.security import get_current_user
 from app.database import get_session
 from app.models import Section, SectionCreate, SectionUpdate, Slot
 
-router = APIRouter(prefix="/api/sections", tags=["sections"])
+router = APIRouter(
+    prefix="/api/sections",
+    tags=["sections"],
+    dependencies=[Depends(get_current_user)],
+)
 
 DATA_DIR = os.environ.get("DATA_DIR", "/data")
 UPLOADS_DIR = Path(f"{DATA_DIR}/uploads/sections")

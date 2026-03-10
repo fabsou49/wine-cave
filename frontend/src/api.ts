@@ -1,5 +1,28 @@
 const BASE = "/api";
 
+export const getToken = () => localStorage.getItem("token");
+export const setToken = (t: string) => localStorage.setItem("token", t);
+export const clearToken = () => localStorage.removeItem("token");
+
+async function request<T>(url: string, opts?: RequestInit): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    ...(opts?.headers as Record<string, string> ?? {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+  const res = await fetch(url, { ...opts, headers });
+  if (res.status === 401) {
+    clearToken();
+    window.location.href = "/login";
+    throw new Error("Non autorisé");
+  }
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
 export interface Section {
   id: number;
   name: string;
@@ -26,25 +49,20 @@ export interface Bottle {
   millesime: number | null;
   taille: string | null;
   label_verified: boolean;
-  wine_type: string | null;
-  peak_year_start: number | null;
-  peak_year_end: number | null;
-  best_pairing: string | null;
-  tasting_year: number | null;
-  description: string | null;
-  analysis_done: boolean;
   slot_id: number | null;
   created_at: string;
 }
 
-async function request<T>(url: string, opts?: RequestInit): Promise<T> {
-  const res = await fetch(url, opts);
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`${res.status}: ${text}`);
-  }
-  return res.json();
-}
+// Auth
+export const login = (username: string, password: string) =>
+  fetch(`${BASE}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  }).then(async (res) => {
+    if (!res.ok) throw new Error("Identifiants incorrects");
+    return res.json() as Promise<{ access_token: string }>;
+  });
 
 // Sections
 export const getSections = () => request<Section[]>(`${BASE}/sections`);
@@ -85,8 +103,6 @@ export const updateBottle = (id: number, data: Partial<Bottle>) =>
   });
 export const deleteBottle = (id: number) =>
   request<{ ok: boolean }>(`${BASE}/bottles/${id}`, { method: "DELETE" });
-export const analyzeBottle = (id: number) =>
-  request<Bottle>(`${BASE}/bottles/${id}/analyze`, { method: "POST" });
 export const placeBottle = (bottleId: number, slotId: number) =>
   request<Bottle>(`${BASE}/bottles/${bottleId}/place`, {
     method: "POST",
@@ -95,16 +111,3 @@ export const placeBottle = (bottleId: number, slotId: number) =>
   });
 export const removeBottleFromSlot = (bottleId: number) =>
   request<Bottle>(`${BASE}/bottles/${bottleId}/place`, { method: "DELETE" });
-
-// Settings
-export interface AppSettings {
-  ollama_host: string;
-  has_env_host: boolean;
-}
-export const getSettings = () => request<AppSettings>(`${BASE}/settings`);
-export const saveSettings = (ollama_host: string) =>
-  request<AppSettings>(`${BASE}/settings`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ollama_host }),
-  });

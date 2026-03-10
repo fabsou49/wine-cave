@@ -72,7 +72,6 @@ export default function Inventory() {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-wine-700">Inventaire</h1>
 
-      {/* Inputs mobile */}
       <input
         ref={cameraInputRef}
         type="file"
@@ -91,7 +90,6 @@ export default function Inventory() {
         onChange={handleCameraChange}
       />
 
-      {/* Boutons mobile uniquement */}
       <div className="sm:hidden grid grid-cols-2 gap-3">
         <button
           onClick={() => cameraInputRef.current?.click()}
@@ -111,7 +109,6 @@ export default function Inventory() {
         </button>
       </div>
 
-      {/* Dropzone — desktop uniquement */}
       <div
         {...getRootProps()}
         className={`hidden sm:flex border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors items-center justify-center min-h-[100px] ${
@@ -129,7 +126,6 @@ export default function Inventory() {
         )}
       </div>
 
-      {/* Barre de progression */}
       {uploadProgress && (
         <div className="bg-white rounded-xl border border-stone-200 p-4 space-y-2">
           <div className="flex justify-between text-sm text-stone-600">
@@ -146,12 +142,11 @@ export default function Inventory() {
         </div>
       )}
 
-      {/* Liste des bouteilles */}
       {isLoading ? (
         <p className="text-stone-500 text-center py-10">Chargement…</p>
       ) : bottles.length === 0 ? (
         <p className="text-stone-500 text-center py-10">
-          Aucune bouteille. {" "}
+          Aucune bouteille.{" "}
           <span className="sm:hidden">Photographiez une étiquette ci-dessus.</span>
           <span className="hidden sm:inline">Importez des photos ci-dessus.</span>
         </p>
@@ -180,24 +175,10 @@ export default function Inventory() {
                   {!b.label_verified && (
                     <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">À vérifier</span>
                   )}
-                  {b.analysis_done && (
-                    <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">Analysé</span>
-                  )}
                   {b.slot_id && (
                     <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">En cave</span>
                   )}
                 </div>
-                {b.analysis_done && (
-                  <div className="text-xs text-stone-500 space-y-0.5 pt-1 border-t border-stone-100">
-                    {b.wine_type && <p><span className="font-medium">Type :</span> {b.wine_type}</p>}
-                    {b.tasting_year && <p><span className="font-medium">À déguster :</span> {b.tasting_year}</p>}
-                    {b.peak_year_start && (
-                      <p><span className="font-medium">Apogée :</span> {b.peak_year_start}–{b.peak_year_end}</p>
-                    )}
-                    {b.best_pairing && <p className="truncate"><span className="font-medium">Accords :</span> {b.best_pairing}</p>}
-                    {b.description && <p className="text-stone-400 italic line-clamp-2">{b.description}</p>}
-                  </div>
-                )}
                 <div className="flex gap-1.5 pt-1">
                   <button
                     onClick={() => setEditing(b)}

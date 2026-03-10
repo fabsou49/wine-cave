@@ -10,11 +10,15 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.core.security import get_current_user
 from app.database import get_session
 from app.models import Bottle, BottleUpdate, PlaceBottle, Slot
-from app.services.ollama import ocr_label
 
-router = APIRouter(prefix="/api/bottles", tags=["bottles"])
+router = APIRouter(
+    prefix="/api/bottles",
+    tags=["bottles"],
+    dependencies=[Depends(get_current_user)],
+)
 
 DATA_DIR = os.environ.get("DATA_DIR", "/data")
 UPLOADS_DIR = Path(f"{DATA_DIR}/uploads/bottles")
@@ -33,7 +37,6 @@ async def upload_bottle(
 ):
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Save the uploaded file temporarily to get an id first
     bottle = Bottle()
     session.add(bottle)
     await session.commit()
@@ -46,26 +49,7 @@ async def upload_bottle(
     with dest.open("wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    photo_path = f"/uploads/bottles/{filename}"
-    bottle.photo_path = photo_path
-
-    # Run OCR via Ollama (non-blocking: save bottle even if OCR fails)
-    try:
-        print(f"[OCR] Starting OCR for {dest}", flush=True)
-        ocr_data = await ocr_label(str(dest))
-        print(f"[OCR] Result: {ocr_data}", flush=True)
-    except Exception as e:
-        import traceback
-        print(f"[OCR] ERROR: {e}", flush=True)
-        traceback.print_exc()
-        ocr_data = {}
-    if ocr_data:
-        bottle.domaine = ocr_data.get("domaine")
-        bottle.cepage = ocr_data.get("cepage")
-        bottle.appellation = ocr_data.get("appellation")
-        bottle.millesime = ocr_data.get("millesime")
-        bottle.taille = ocr_data.get("taille")
-
+    bottle.photo_path = f"/uploads/bottles/{filename}"
     session.add(bottle)
     await session.commit()
     await session.refresh(bottle)
@@ -98,7 +82,6 @@ async def delete_bottle(bottle_id: int, session: AsyncSession = Depends(get_sess
     if not bottle:
         raise HTTPException(status_code=404, detail="Bottle not found")
 
-    # Delete photo file if exists
     if bottle.photo_path:
         photo_file = Path(f"{DATA_DIR}{bottle.photo_path}")
         if photo_file.exists():
@@ -123,7 +106,6 @@ async def place_bottle(
     if not slot:
         raise HTTPException(status_code=404, detail="Slot not found")
 
-    # Check if slot already occupied by another bottle
     existing = await session.exec(
         select(Bottle).where(Bottle.slot_id == data.slot_id, Bottle.id != bottle_id)
     )

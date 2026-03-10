@@ -29,13 +29,6 @@ class Bottle(SQLModel, table=True):
     millesime: Optional[int] = None
     taille: Optional[str] = None
     label_verified: bool = False
-    wine_type: Optional[str] = None
-    peak_year_start: Optional[int] = None
-    peak_year_end: Optional[int] = None
-    best_pairing: Optional[str] = None
-    tasting_year: Optional[int] = None
-    description: Optional[str] = None
-    analysis_done: bool = False
     slot_id: Optional[int] = Field(default=None, foreign_key="slot.id")
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -60,12 +53,6 @@ class BottleUpdate(SQLModel):
     millesime: Optional[int] = None
     taille: Optional[str] = None
     label_verified: Optional[bool] = None
-    wine_type: Optional[str] = None
-    peak_year_start: Optional[int] = None
-    peak_year_end: Optional[int] = None
-    best_pairing: Optional[str] = None
-    tasting_year: Optional[int] = None
-    description: Optional[str] = None
 
 
 class PlaceBottle(SQLModel):
