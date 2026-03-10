@@ -1,7 +1,7 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import type { Bottle } from "../api";
-import { updateBottle } from "../api";
+import { updateBottle, analyzeBottle } from "../api";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
 
 export default function LabelForm({ bottle, onClose }: Props) {
   const qc = useQueryClient();
+  const [analyzing, setAnalyzing] = useState(false);
   const [form, setForm] = useState({
     domaine: bottle.domaine ?? "",
     cepage: bottle.cepage ?? "",
@@ -25,6 +26,36 @@ export default function LabelForm({ bottle, onClose }: Props) {
   const set = (field: string) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  const handleAnalyze = async () => {
+    if (!bottle.photo_path) return;
+    setAnalyzing(true);
+    try {
+      const updated = await analyzeBottle(bottle.id);
+      // Refresh form fields with AI results
+      setForm({
+        domaine: updated.domaine ?? "",
+        cepage: updated.cepage ?? "",
+        appellation: updated.appellation ?? "",
+        millesime: updated.millesime?.toString() ?? "",
+        taille: updated.taille ?? "",
+        obtention_detail: updated.obtention_detail ?? "",
+        statut: updated.statut ?? "à ranger",
+        commentaire_consommation: updated.commentaire_consommation ?? "",
+      });
+      qc.invalidateQueries({ queryKey: ["bottles"] });
+      toast.success("Étiquette analysée ✨ — vérifiez et sauvegardez");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "";
+      if (msg.includes("503") || msg.includes("API_KEY")) {
+        toast.error("Clé GEMINI_API_KEY non configurée");
+      } else {
+        toast.error("Erreur analyse — réessayez");
+      }
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -72,11 +103,21 @@ export default function LabelForm({ bottle, onClose }: Props) {
         {/* Scrollable body */}
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
           {bottle.photo_path && (
-            <img
-              src={bottle.photo_path}
-              alt="étiquette"
-              className="w-full h-36 object-contain rounded-xl bg-stone-50"
-            />
+            <div className="relative">
+              <img
+                src={bottle.photo_path}
+                alt="étiquette"
+                className="w-full h-36 object-contain rounded-xl bg-stone-50"
+              />
+              <button
+                type="button"
+                onClick={handleAnalyze}
+                disabled={analyzing}
+                className="absolute bottom-2 right-2 bg-amber-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow active:bg-amber-600 disabled:opacity-60 flex items-center gap-1"
+              >
+                {analyzing ? "⏳ Analyse…" : "✨ Analyser"}
+              </button>
+            </div>
           )}
 
           {/* Wine info */}

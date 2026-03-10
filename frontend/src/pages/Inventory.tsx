@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { getBottles, uploadBottle, deleteBottle } from "../api";
+import { getBottles, uploadBottle, deleteBottle, analyzeBottle } from "../api";
 import type { Bottle } from "../api";
 import LabelForm from "../components/LabelForm";
 
@@ -18,6 +18,7 @@ export default function Inventory() {
     queryFn: getBottles,
   });
   const [editing, setEditing] = useState<Bottle | null>(null);
+  const [analyzing, setAnalyzing] = useState<number | null>(null);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -54,6 +55,25 @@ export default function Inventory() {
     const files = Array.from(e.target.files ?? []);
     if (files.length) processFiles(files);
     e.target.value = "";
+  };
+
+  const handleAnalyze = async (b: Bottle) => {
+    setAnalyzing(b.id);
+    try {
+      const updated = await analyzeBottle(b.id);
+      qc.invalidateQueries({ queryKey: ["bottles"] });
+      toast.success(`Étiquette analysée ✨`);
+      setEditing(updated); // open LabelForm so user can review/adjust
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur analyse";
+      if (msg.includes("503") || msg.includes("API_KEY")) {
+        toast.error("Clé GEMINI_API_KEY non configurée");
+      } else {
+        toast.error("Erreur analyse — réessayez");
+      }
+    } finally {
+      setAnalyzing(null);
+    }
   };
 
   const handleDelete = async (b: Bottle) => {
@@ -178,6 +198,16 @@ export default function Inventory() {
                   )}
                 </div>
                 <div className="flex gap-1.5 mt-auto pt-2">
+                  {b.photo_path && (
+                    <button
+                      onClick={() => handleAnalyze(b)}
+                      disabled={analyzing === b.id}
+                      className="text-xs bg-amber-500 text-white rounded-xl px-2 py-2 font-medium active:bg-amber-600 disabled:opacity-50"
+                      title="Analyser avec l'IA"
+                    >
+                      {analyzing === b.id ? "⏳" : "✨"}
+                    </button>
+                  )}
                   <button
                     onClick={() => setEditing(b)}
                     className="flex-1 text-xs bg-wine-600 text-white rounded-xl py-2 font-medium active:bg-wine-700"

@@ -149,3 +149,5 @@ export const placeBottle = (bottleId: number, slotId: number) =>
   });
 export const removeBottleFromSlot = (bottleId: number) =>
   request<Bottle>(`${BASE}/bottles/${bottleId}/place`, { method: "DELETE" });
+export const analyzeBottle = (id: number) =>
+  request<Bottle>(`${BASE}/bottles/${id}/analyze`, { method: "POST" });

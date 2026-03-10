@@ -13,6 +13,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.security import get_current_user
 from app.database import get_session
 from app.models import Bottle, BottleUpdate, PlaceBottle, Slot
+from app.services.gemini import analyze_label
 
 router = APIRouter(
     prefix="/api/bottles",
@@ -107,6 +108,48 @@ async def delete_bottle(bottle_id: int, session: AsyncSession = Depends(get_sess
     await session.delete(bottle)
     await session.commit()
     return {"ok": True}
+
+
+@router.post("/{bottle_id}/analyze", response_model=Bottle)
+async def analyze_bottle(
+    bottle_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    bottle = await session.get(Bottle, bottle_id)
+    if not bottle:
+        raise HTTPException(status_code=404, detail="Bottle not found")
+    if not bottle.photo_path:
+        raise HTTPException(status_code=400, detail="Aucune photo à analyser")
+
+    full_path = f"{DATA_DIR}{bottle.photo_path}"
+
+    try:
+        data = await analyze_label(full_path)
+    except EnvironmentError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        logger.error("Gemini analysis failed: %s", e)
+        raise HTTPException(status_code=500, detail="Erreur lors de l'analyse — réessayez")
+
+    # Apply extracted fields (never overwrite with null)
+    if data.get("domaine"):
+        bottle.domaine = data["domaine"]
+    if data.get("appellation"):
+        bottle.appellation = data["appellation"]
+    if data.get("millesime"):
+        try:
+            bottle.millesime = int(data["millesime"])
+        except (ValueError, TypeError):
+            pass
+    if data.get("taille"):
+        bottle.taille = data["taille"]
+    if data.get("cepage"):
+        bottle.cepage = data["cepage"]
+
+    session.add(bottle)
+    await session.commit()
+    await session.refresh(bottle)
+    return bottle
 
 
 @router.post("/{bottle_id}/place", response_model=Bottle)

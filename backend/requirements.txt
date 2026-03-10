@@ -7,3 +7,4 @@ python-multipart==0.0.17
 PyJWT==2.9.0
 pyotp==2.9.0
 segno==1.6.1
+google-generativeai==0.8.3
