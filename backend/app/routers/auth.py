@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from app.core import mfa as mfa_service
@@ -9,6 +9,7 @@ from app.core.security import (
     decode_temp_token,
     get_current_user,
 )
+from app.core.limiter import limiter
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -35,7 +36,8 @@ class MfaEnableData(BaseModel):
 # ── Login ─────────────────────────────────────────────────────────────────────
 
 @router.post("/login")
-async def login(data: LoginData):
+@limiter.limit("5/minute")
+async def login(request: Request, data: LoginData):
     if not check_credentials(data.username, data.password):
         raise HTTPException(status_code=401, detail="Identifiants incorrects")
 
@@ -47,7 +49,8 @@ async def login(data: LoginData):
 
 
 @router.post("/mfa/verify")
-async def mfa_verify(data: MfaVerifyData):
+@limiter.limit("5/minute")
+async def mfa_verify(request: Request, data: MfaVerifyData):
     username = decode_temp_token(data.temp_token)
     if not username:
         raise HTTPException(status_code=401, detail="Session expirée, reconnectez-vous")

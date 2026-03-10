@@ -24,6 +24,21 @@ router = APIRouter(
 DATA_DIR = os.environ.get("DATA_DIR", "/data")
 UPLOADS_DIR = Path(f"{DATA_DIR}/uploads/bottles")
 
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".heic"}
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic"}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+
+def _safe_upload_path(filename: str) -> tuple[str, Path]:
+    """Validate and return (suffix, dest_path). Raises HTTPException on invalid input."""
+    suffix = Path(filename or "").suffix.lower()
+    if suffix not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail="Format non autorisé. Utilisez JPG, PNG, WEBP ou HEIC",
+        )
+    return suffix
+
 
 @router.get("", response_model=List[Bottle])
 async def list_bottles(session: AsyncSession = Depends(get_session)):
@@ -48,6 +63,19 @@ async def upload_bottle(
     file: UploadFile = File(...),
     session: AsyncSession = Depends(get_session),
 ):
+    # Validate extension
+    suffix = _safe_upload_path(file.filename or "")
+
+    # Validate MIME type
+    content_type = (file.content_type or "").split(";")[0].strip()
+    if content_type and content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=400, detail="Type de fichier non autorisé")
+
+    # Read and check size
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="Fichier trop volumineux (max 10 Mo)")
+
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
     bottle = Bottle()
@@ -55,12 +83,9 @@ async def upload_bottle(
     await session.commit()
     await session.refresh(bottle)
 
-    suffix = Path(file.filename).suffix
     filename = f"bottle_{bottle.id}{suffix}"
     dest = UPLOADS_DIR / filename
-
-    with dest.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
+    dest.write_bytes(content)
 
     bottle.photo_path = f"/uploads/bottles/{filename}"
     session.add(bottle)
@@ -101,8 +126,9 @@ async def delete_bottle(bottle_id: int, session: AsyncSession = Depends(get_sess
         raise HTTPException(status_code=404, detail="Bottle not found")
 
     if bottle.photo_path:
-        photo_file = Path(f"{DATA_DIR}{bottle.photo_path}")
-        if photo_file.exists():
+        photo_file = (Path(DATA_DIR) / bottle.photo_path.lstrip("/")).resolve()
+        uploads_root = Path(DATA_DIR).resolve()
+        if str(photo_file).startswith(str(uploads_root)) and photo_file.exists():
             photo_file.unlink()
 
     await session.delete(bottle)
@@ -121,10 +147,16 @@ async def analyze_bottle(
     if not bottle.photo_path:
         raise HTTPException(status_code=400, detail="Aucune photo à analyser")
 
-    full_path = f"{DATA_DIR}{bottle.photo_path}"
+    # Prevent path traversal
+    full_path = (Path(DATA_DIR) / bottle.photo_path.lstrip("/")).resolve()
+    uploads_root = Path(DATA_DIR).resolve()
+    if not str(full_path).startswith(str(uploads_root)):
+        raise HTTPException(status_code=400, detail="Chemin non autorisé")
+    if not full_path.exists():
+        raise HTTPException(status_code=404, detail="Fichier introuvable")
 
     try:
-        data = await analyze_label(full_path)
+        data = await analyze_label(str(full_path))
     except EnvironmentError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except RateLimitError as e:

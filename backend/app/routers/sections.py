@@ -21,6 +21,10 @@ router = APIRouter(
 DATA_DIR = os.environ.get("DATA_DIR", "/data")
 UPLOADS_DIR = Path(f"{DATA_DIR}/uploads/sections")
 
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".heic"}
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic"}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
 
 @router.get("", response_model=List[Section])
 async def list_sections(session: AsyncSession = Depends(get_session)):
@@ -104,11 +108,24 @@ async def upload_section_photo(
     if not section:
         raise HTTPException(status_code=404, detail="Section not found")
 
+    # Validate extension
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Format non autorisé. Utilisez JPG, PNG, WEBP ou HEIC")
+
+    # Validate MIME type
+    content_type = (file.content_type or "").split(";")[0].strip()
+    if content_type and content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=400, detail="Type de fichier non autorisé")
+
+    # Read and check size
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="Fichier trop volumineux (max 10 Mo)")
+
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-    suffix = Path(file.filename).suffix
     dest = UPLOADS_DIR / f"section_{section_id}{suffix}"
-    with dest.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
+    dest.write_bytes(content)
 
     section.photo_path = f"/uploads/sections/section_{section_id}{suffix}"
     session.add(section)
