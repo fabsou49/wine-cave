@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { clearToken } from "../api";
+import MfaSetup from "./MfaSetup";
 
 const navItems = [
   { to: "/", label: "Cave", icon: "🍷" },
@@ -9,6 +11,7 @@ const navItems = [
 
 export default function Layout() {
   const navigate = useNavigate();
+  const [showMfa, setShowMfa] = useState(false);
 
   const handleLogout = () => {
     clearToken();
@@ -36,12 +39,18 @@ export default function Layout() {
               </NavLink>
             ))}
           </nav>
-          <button
-            onClick={handleLogout}
-            className="ml-auto text-wine-200 hover:text-white text-sm hidden sm:block"
-          >
-            Déconnexion
-          </button>
+          <div className="ml-auto hidden sm:flex items-center gap-3">
+            <button
+              onClick={() => setShowMfa(true)}
+              className="text-wine-200 hover:text-white text-sm"
+              title="Double authentification"
+            >
+              🔐
+            </button>
+            <button onClick={handleLogout} className="text-wine-200 hover:text-white text-sm">
+              Déconnexion
+            </button>
+          </div>
         </div>
       </header>
 
@@ -71,6 +80,13 @@ export default function Layout() {
           </NavLink>
         ))}
         <button
+          onClick={() => setShowMfa(true)}
+          className="flex-1 flex flex-col items-center justify-center py-2.5 text-[11px] font-medium text-stone-400 active:text-stone-600"
+        >
+          <span className="text-xl mb-0.5">🔐</span>
+          <span>Sécurité</span>
+        </button>
+        <button
           onClick={handleLogout}
           className="flex-1 flex flex-col items-center justify-center py-2.5 text-[11px] font-medium text-stone-400 active:text-stone-600"
         >
@@ -78,6 +94,8 @@ export default function Layout() {
           <span>Quitter</span>
         </button>
       </nav>
+
+      {showMfa && <MfaSetup onClose={() => setShowMfa(false)} />}
     </div>
   );
 }

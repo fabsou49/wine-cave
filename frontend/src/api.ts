@@ -66,7 +66,39 @@ export const login = (username: string, password: string) =>
     body: JSON.stringify({ username, password }),
   }).then(async (res) => {
     if (!res.ok) throw new Error("Identifiants incorrects");
+    return res.json() as Promise<
+      | { access_token: string; mfa_required?: false }
+      | { mfa_required: true; temp_token: string }
+    >;
+  });
+
+export const verifyMfa = (temp_token: string, code: string) =>
+  fetch(`${BASE}/auth/mfa/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ temp_token, code }),
+  }).then(async (res) => {
+    if (!res.ok) throw new Error("Code MFA incorrect");
     return res.json() as Promise<{ access_token: string }>;
+  });
+
+export const getMfaStatus = () => request<{ enabled: boolean }>(`${BASE}/auth/mfa/status`);
+
+export const getMfaSetup = () =>
+  request<{ secret: string; qr_code: string; uri: string }>(`${BASE}/auth/mfa/setup`);
+
+export const enableMfa = (secret: string, code: string) =>
+  request<{ ok: boolean }>(`${BASE}/auth/mfa/enable`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ secret, code }),
+  });
+
+export const disableMfa = (code: string) =>
+  request<{ ok: boolean }>(`${BASE}/auth/mfa/disable`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
   });
 
 // Sections

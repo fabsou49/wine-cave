@@ -10,6 +10,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-in-production")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_DAYS = 30
+TEMP_TOKEN_MINUTES = 5  # MFA intermediate token lifetime
 
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin")
@@ -28,9 +29,31 @@ def create_token(username: str) -> str:
     return jwt.encode({"sub": username, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
 
 
+def create_temp_token(username: str) -> str:
+    """Short-lived token used only to proceed to the MFA verification step."""
+    expire = datetime.now(timezone.utc) + timedelta(minutes=TEMP_TOKEN_MINUTES)
+    return jwt.encode(
+        {"sub": username, "exp": expire, "mfa_pending": True},
+        SECRET_KEY,
+        algorithm=ALGORITHM,
+    )
+
+
 def decode_token(token: str) -> Optional[str]:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("mfa_pending"):
+            return None  # Temp tokens are not valid for API access
+        return payload.get("sub")
+    except jwt.PyJWTError:
+        return None
+
+
+def decode_temp_token(token: str) -> Optional[str]:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if not payload.get("mfa_pending"):
+            return None
         return payload.get("sub")
     except jwt.PyJWTError:
         return None
