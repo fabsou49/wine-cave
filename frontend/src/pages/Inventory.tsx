@@ -65,12 +65,10 @@ export default function Inventory() {
       toast.success(`Étiquette analysée ✨`);
       setEditing(updated); // open LabelForm so user can review/adjust
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Erreur analyse";
-      if (msg.includes("503") || msg.includes("API_KEY")) {
-        toast.error("Clé GEMINI_API_KEY non configurée");
-      } else {
-        toast.error("Erreur analyse — réessayez");
-      }
+      const msg = e instanceof Error ? e.message : "";
+      if (msg.includes("503")) toast.error("Clé GEMINI_API_KEY non configurée");
+      else if (msg.includes("429")) toast.error("Quota Gemini atteint — réessayez dans 1 min");
+      else toast.error("Erreur analyse — réessayez");
     } finally {
       setAnalyzing(null);
     }

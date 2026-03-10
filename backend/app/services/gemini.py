@@ -45,10 +45,16 @@ def _analyze_sync(image_path: str) -> dict:
     with open(image_path, "rb") as f:
         image_data = f.read()
 
-    response = model.generate_content([
-        PROMPT,
-        {"mime_type": _infer_mime(image_path), "data": image_data},
-    ])
+    try:
+        response = model.generate_content([
+            PROMPT,
+            {"mime_type": _infer_mime(image_path), "data": image_data},
+        ])
+    except Exception as e:
+        err = str(e).lower()
+        if "quota" in err or "429" in err or "resource_exhausted" in err:
+            raise RateLimitError("Quota Gemini atteint — réessayez dans une minute")
+        raise
 
     text = response.text.strip()
     # Strip markdown fences if Gemini adds them
@@ -56,6 +62,10 @@ def _analyze_sync(image_path: str) -> dict:
     text = re.sub(r"\s*```$", "", text)
 
     return json.loads(text)
+
+
+class RateLimitError(Exception):
+    pass
 
 
 async def analyze_label(image_path: str) -> dict:

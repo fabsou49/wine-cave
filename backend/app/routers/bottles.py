@@ -13,7 +13,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.security import get_current_user
 from app.database import get_session
 from app.models import Bottle, BottleUpdate, PlaceBottle, Slot
-from app.services.gemini import analyze_label
+from app.services.gemini import analyze_label, RateLimitError
 
 router = APIRouter(
     prefix="/api/bottles",
@@ -127,6 +127,8 @@ async def analyze_bottle(
         data = await analyze_label(full_path)
     except EnvironmentError as e:
         raise HTTPException(status_code=503, detail=str(e))
+    except RateLimitError as e:
+        raise HTTPException(status_code=429, detail=str(e))
     except Exception as e:
         logger.error("Gemini analysis failed: %s", e)
         raise HTTPException(status_code=500, detail="Erreur lors de l'analyse — réessayez")
